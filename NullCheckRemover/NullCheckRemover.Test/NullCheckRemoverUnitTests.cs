@@ -24,18 +24,40 @@ namespace NullCheckRemover.Test
         {
             var test = @"
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-    using System.Diagnostics;
 
-    namespace ConsoleApplication1
+namespace Test
+{
+    class Program
     {
-        class {|#0:TypeName|}
-        {   
+        static void Main2(string[]? args)
+        {
+            if (args == null) { }
+            if (args != null) { }
+            if (null == args) { }
+            if (null != args) { }
+            if (args == default) { }
+            if (args != default) { }
+            if (default == args) { }
+            if (default != args) { }
+            if (args is {}) { }
+            if (args is null) { }
+            if (args is not null) { }
+            var t = args?.GetLength(0);
+            var a = args ?? Array.Empty<string>();
+            args ??= Array.Empty<string>();
+            switch (args)
+            {
+                case null:
+                    break;
+            }
+            var q = args switch
+            {
+                null => true,
+                _ => throw new NotImplementedException()
+            };
         }
-    }";
+    }
+}";
 
             var fixtest = @"
     using System;
@@ -62,16 +84,39 @@ namespace NullCheckRemover.Test
                 var source = @"
     using System;
 
-    namespace Test
+namespace Test
+{
+    class Program
     {
-        class Program
+        static void Main2(string[]? args)
         {
-            static void Main2(string[]? args)
+            if (args == null) { }
+            if (args != null) { }
+            if (null == args) { }
+            if (null != args) { }
+            if (args == default) { }
+            if (args != default) { }
+            if (default == args) { }
+            if (default != args) { }
+            if (args is {}) { }
+            if (args is null) { }
+            if (args is not null) { }
+            var t = args?.GetLength(0);
+            var a = args ?? Array.Empty<string>();
+            args ??= Array.Empty<string>();
+            switch (args)
             {
-                 var t = args is not null;
+                case null:
+                    break;
             }
+            var q = args switch
+            {
+                null => true,
+                _ => throw new NotImplementedException()
+            };
         }
-    }";
+    }
+}";
                 await VerifyCS.VerifyAnalyzerAsync(source);
 
         }

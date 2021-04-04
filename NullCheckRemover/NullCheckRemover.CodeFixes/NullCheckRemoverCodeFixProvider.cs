@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.Editing;
 
 namespace NullCheckRemover
 {
@@ -31,22 +33,21 @@ namespace NullCheckRemover
 
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
+            Debugger.Launch();
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
 
-            // TODO: Replace the following code with your own analysis, generating a CodeAction for each fix to suggest
-            var diagnostic = context.Diagnostics.First();
-            var diagnosticSpan = diagnostic.Location.SourceSpan;
+            var diagnostics = context
+                .Diagnostics
+                .Where(k => FixableDiagnosticIds.Contains(k.Id))
+                .ToList();
 
-            // Find the type declaration identified by the diagnostic.
-            var declaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<TypeDeclarationSyntax>().First();
-
-            // Register a code action that will invoke the fix.
+            var locations = diagnostics.Select(k => k.Location).ToList();
             context.RegisterCodeFix(
                 CodeAction.Create(
-                    title: CodeFixResources.CodeFixTitle,
-                    createChangedSolution: c => MakeUppercaseAsync(context.Document, declaration, c),
-                    equivalenceKey: nameof(CodeFixResources.CodeFixTitle)),
-                diagnostic);
+                    CodeFixResources.CodeFixTitle,
+                    x => RemoveRedundantNullChecks(context, locations, context.CancellationToken),
+                    nameof(CodeFixResources.CodeFixTitle)), 
+                diagnostics);
         }
 
         private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
@@ -62,10 +63,28 @@ namespace NullCheckRemover
             // Produce a new solution that has all references to that type renamed, including the declaration.
             var originalSolution = document.Project.Solution;
             var optionSet = originalSolution.Workspace.Options;
+            
             var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
 
             // Return the new solution with the now-uppercase type name.
             return newSolution;
+        }
+
+        private async Task<Document> RemoveRedundantNullChecks(CodeFixContext context, IReadOnlyList<Location> locations, CancellationToken token)
+        {
+            var root = await context.Document.GetSyntaxRootAsync(token).ConfigureAwait(false);
+            var editor = await DocumentEditor.CreateAsync(context.Document, token);
+            foreach (Location location in locations)
+            {
+                var node = root.FindNode(location.SourceSpan);
+                if (node is BinaryExpressionSyntax eq)
+                {
+                    var newEq = eq.WithOperatorToken(SyntaxFactory.Token(SyntaxKind.GreaterThanEqualsToken));
+                    editor.ReplaceNode(eq, newEq);
+                }
+            }
+
+            return editor.GetChangedDocument();
         }
     }
 }
