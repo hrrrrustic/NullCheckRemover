@@ -106,7 +106,7 @@ namespace NullCheckRemover
             if(nullLabel is null)
                 return;
 
-            AddDiagnostic(node);
+            AddDiagnostic(nullLabel);
         }
 
         public override void VisitSwitchExpression(SwitchExpressionSyntax node)
@@ -123,7 +123,7 @@ namespace NullCheckRemover
             if(nullArm is null)
                 return;
 
-            AddDiagnostic(node);
+            AddDiagnostic(nullArm);
         }
 
         private void CheckCoalesceExpression(BinaryExpressionSyntax binary)
@@ -164,10 +164,10 @@ namespace NullCheckRemover
 
         private void CheckIsSomethingPattern(RecursivePatternSyntax recursivePattern)
         {
-            if(recursivePattern.PositionalPatternClause?.Subpatterns.Count != 0)
+            if(recursivePattern.PositionalPatternClause?.Subpatterns.Any() ?? false)
                 return;
 
-            if(recursivePattern.PropertyPatternClause?.Subpatterns.Count != 0)
+            if(recursivePattern.PropertyPatternClause?.Subpatterns.Any() ?? false)
                 return;
 
             AddDiagnostic(recursivePattern);

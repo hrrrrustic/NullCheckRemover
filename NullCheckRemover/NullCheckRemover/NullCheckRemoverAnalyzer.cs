@@ -26,6 +26,40 @@ namespace NullCheckRemover
             context.EnableConcurrentExecution();
             context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
             context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
+            context.RegisterSyntaxNodeAction(AnalyzeConstructor, SyntaxKind.ConstructorDeclaration);
+            context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
+
+
+            //context.RegisterSyntaxNodeAction(AnalyzeParenthesizedLambda, SyntaxKind.ParenthesizedLambdaExpression);
+            //context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
+        }
+
+        private static void AnalyzeSimpleLambda(SyntaxNodeAnalysisContext context)
+        {
+            var simpleLambda = (SimpleLambdaExpressionSyntax) context.Node;
+            var parameters = simpleLambda.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            AnalyzeParameterizedMember(context, parameters);
+        }
+
+        private static void AnalyzeParenthesizedLambda(SyntaxNodeAnalysisContext context)
+        {
+            var parenthesizedLambda = (ParenthesizedLambdaExpressionSyntax)context.Node;
+            var parameters = parenthesizedLambda.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            AnalyzeParameterizedMember(context, parameters);
+        }
+
+        private static void AnalyzeLocalMethod(SyntaxNodeAnalysisContext context)
+        {
+            var localMethod = (LocalFunctionStatementSyntax)context.Node;
+            var parameters = localMethod.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            AnalyzeParameterizedMember(context, parameters);
+        }
+
+        private static void AnalyzeConstructor(SyntaxNodeAnalysisContext context)
+        {
+            var constructor = (ConstructorDeclarationSyntax) context.Node;
+            var parameters = constructor.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            AnalyzeParameterizedMember(context, parameters);
         }
 
         private static void AnalyzeMethod(SyntaxNodeAnalysisContext context)
@@ -44,6 +78,9 @@ namespace NullCheckRemover
 
         private static void AnalyzeParameterizedMember(SyntaxNodeAnalysisContext context, IReadOnlyList<IParameterSymbol> parameters)
         {
+            if (parameters.Count == 0)
+                return;
+
             var walker = new NullCheckWalker(context.SemanticModel, parameters);
             walker.Visit(context.Node);
             var locations = walker.GetDiagnosticLocations();
