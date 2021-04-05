@@ -11,7 +11,7 @@ namespace NullCheckRemover
     {
         private readonly SemanticModel _semantic;
         private readonly IReadOnlyList<IParameterSymbol> _parameters;
-        private readonly List<Location> _diagnosticLocations = new List<Location>();
+        private readonly List<Location> _diagnosticLocations = new();
 
         public NullCheckWalker(SemanticModel semantic, IReadOnlyList<IParameterSymbol> parameters)
         {
@@ -21,31 +21,24 @@ namespace NullCheckRemover
 
         public IReadOnlyList<Location> GetDiagnosticLocations() => _diagnosticLocations;
 
-        private bool IsParameter(ISymbol symbol)
-        {
-            return _parameters.Any(k => SymbolEqualityComparer.Default.Equals(k, symbol));
-        }
+        private bool IsParameter(ISymbol? symbol) => _parameters.Any(k => SymbolEqualityComparer.Default.Equals(k, symbol));
+        private void AddDiagnostic(SyntaxNode node) => _diagnosticLocations.Add(node.GetLocation());
 
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
             base.VisitBinaryExpression(node);
 
-            if (node.IsKind(SyntaxKind.CoalesceExpression))
+            switch (node.Kind())
             {
-                CheckCoalesceExpression(node);
-                return;
-            }
-
-            if (node.IsKind(SyntaxKind.EqualsExpression))
-            {
-                CheckEqualityExpression(node);
-                return;
-            }
-
-            if (node.IsKind(SyntaxKind.NotEqualsExpression))
-            {
-                CheckEqualityExpression(node);
-                return;
+                case SyntaxKind.CoalesceExpression:
+                    CheckCoalesceExpression(node);
+                    return;
+                case SyntaxKind.NotEqualsExpression:
+                case SyntaxKind.EqualsExpression:
+                    CheckEqualityExpression(node);
+                    return;
+                default:
+                    return;
             }
         }
 
@@ -56,21 +49,17 @@ namespace NullCheckRemover
             if(!IsParameter(_semantic.GetSymbolInfo(node.Expression).Symbol))
                 return;
 
-            if (node.Pattern is ConstantPatternSyntax constant)
+            switch (node.Pattern)
             {
-                CheckIsNullPattern(constant);
-                return;
-            }
-
-            if (node.Pattern is RecursivePatternSyntax recursive)
-            {
-                CheckIsSomethingPattern(recursive);
-                return;
-            }
-
-            if (node.Pattern is UnaryPatternSyntax notPattern)
-            {
-                CheckIsNotNullPattern(notPattern);
+                case ConstantPatternSyntax constant:
+                    CheckIsNullPattern(constant);
+                    break;
+                case RecursivePatternSyntax recursive:
+                    CheckIsSomethingPattern(recursive);
+                    break;
+                case UnaryPatternSyntax notPattern:
+                    CheckIsNotNullPattern(notPattern);
+                    break;
             }
         }
         
@@ -81,7 +70,7 @@ namespace NullCheckRemover
             if (!IsParameter(_semantic.GetSymbolInfo(node.Expression).Symbol))
                 return;
 
-            _diagnosticLocations.Add(node.GetLocation());
+            AddDiagnostic(node);
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
@@ -92,7 +81,7 @@ namespace NullCheckRemover
             if(!IsParameter(_semantic.GetSymbolInfo(node.Left).Symbol))
                 return;
 
-            _diagnosticLocations.Add(node.GetLocation());
+            AddDiagnostic(node);
         }
 
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
@@ -117,7 +106,7 @@ namespace NullCheckRemover
             if(nullLabel is null)
                 return;
 
-            _diagnosticLocations.Add(nullLabel.GetLocation());
+            AddDiagnostic(node);
         }
 
         public override void VisitSwitchExpression(SwitchExpressionSyntax node)
@@ -134,7 +123,7 @@ namespace NullCheckRemover
             if(nullArm is null)
                 return;
 
-            _diagnosticLocations.Add(nullArm.GetLocation());
+            AddDiagnostic(node);
         }
 
         private void CheckCoalesceExpression(BinaryExpressionSyntax binary)
@@ -142,7 +131,7 @@ namespace NullCheckRemover
             if(!IsParameter(_semantic.GetSymbolInfo(binary.Left).Symbol))
                 return;
 
-            _diagnosticLocations.Add(binary.GetLocation());
+            AddDiagnostic(binary);
         }
 
         private void CheckEqualityExpression(BinaryExpressionSyntax binary)
@@ -162,7 +151,7 @@ namespace NullCheckRemover
             if (!IsParameter(parameter))
                 return;
 
-            _diagnosticLocations.Add(binary.GetLocation());
+            AddDiagnostic(binary);
         }
 
         private void CheckIsNullPattern(ConstantPatternSyntax constant)
@@ -170,18 +159,18 @@ namespace NullCheckRemover
             if (!constant.Expression.IsKind(SyntaxKind.NullLiteralExpression))
                 return;
 
-            _diagnosticLocations.Add(constant.GetLocation());
+            AddDiagnostic(constant);
         }
 
         private void CheckIsSomethingPattern(RecursivePatternSyntax recursivePattern)
         {
-            if(recursivePattern.PositionalPatternClause?.Subpatterns.Any() ?? false)
+            if(recursivePattern.PositionalPatternClause?.Subpatterns.Count != 0)
                 return;
 
-            if(recursivePattern.PropertyPatternClause?.Subpatterns.Any() ?? false)
+            if(recursivePattern.PropertyPatternClause?.Subpatterns.Count != 0)
                 return;
 
-            _diagnosticLocations.Add(recursivePattern.GetLocation());
+            AddDiagnostic(recursivePattern);
         }
 
         private void CheckIsNotNullPattern(UnaryPatternSyntax notPattern)
