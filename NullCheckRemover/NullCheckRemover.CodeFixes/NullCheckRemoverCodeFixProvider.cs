@@ -79,9 +79,79 @@ namespace NullCheckRemover
                 var node = root.FindNode(location.SourceSpan);
                 if (node is BinaryExpressionSyntax eq)
                 {
-                    var newEq = eq.WithOperatorToken(SyntaxFactory.Token(SyntaxKind.GreaterThanEqualsToken));
-                    editor.ReplaceNode(eq, newEq);
+                    BinaryFix(eq, editor);
                 }
+                else if (node is IsPatternExpressionSyntax patter)
+                {
+                    IsPatternFix(patter, editor);
+                }
+                else if (node is SwitchExpressionArmSyntax arm)
+                {
+                    SwitchFix(arm, editor);
+                }
+                else if (node is CaseSwitchLabelSyntax label)
+                {
+                    SwitchFix(label, editor);
+                }
+            }
+
+            return editor.GetChangedDocument();
+        }
+
+        private void IsPatternFix(IsPatternExpressionSyntax pattern, DocumentEditor editor)
+        {
+            if (pattern.Pattern is ConstantPatternSyntax constant)
+            {
+                var trueExpression = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
+                editor.ReplaceNode(pattern, trueExpression);
+            }
+            else if (pattern.Pattern is UnaryPatternSyntax unary)
+            {
+                var falseExpression = SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
+                editor.ReplaceNode(pattern, falseExpression);
+            }
+            else if(pattern.Pattern is RecursivePatternSyntax recursive)
+            {
+                var trueExpression = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
+                editor.ReplaceNode(pattern, trueExpression);
+            }
+        }
+
+        private void BinaryFix(BinaryExpressionSyntax eq, DocumentEditor editor)
+        {
+            if (eq.OperatorToken.IsKind(SyntaxKind.EqualsEqualsToken))
+            {
+                var trueExpression = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
+                editor.ReplaceNode(eq, trueExpression);
+            }
+            else if(eq.OperatorToken.IsKind(SyntaxKind.ExclamationEqualsToken))
+            {
+                var falseExpression = SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
+                editor.ReplaceNode(eq, falseExpression);
+            }
+            else
+            {
+                var withoutCoalesce = eq.Right;
+                editor.ReplaceNode(eq, withoutCoalesce);
+            }
+        }
+
+        private Document SwitchFix(SwitchExpressionArmSyntax arm, DocumentEditor editor)
+        {
+            editor.RemoveNode(arm);
+            return editor.GetChangedDocument();
+        }
+
+        private Document SwitchFix(CaseSwitchLabelSyntax label, DocumentEditor editor)
+        {
+            var section = label.Ancestors().OfType<SwitchSectionSyntax>().First();
+            if (section.Labels.Count == 1)
+            {
+                editor.RemoveNode(section);
+            }
+            else
+            {
+                editor.RemoveNode(label);
             }
 
             return editor.GetChangedDocument();

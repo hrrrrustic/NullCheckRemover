@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -25,7 +25,7 @@ namespace NullCheckRemover
                     continue;
 
                 var typeInfo = semantic.GetTypeInfo(parameterType);
-                if (typeInfo.Type is not {IsReferenceType:true})
+                if (typeInfo.Type is not ({IsReferenceType:true} or {IsReferenceType: false, IsValueType:false}))
                     continue;
                 
                 var symbol = semantic.GetDeclaredSymbol(parameter);
