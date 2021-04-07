@@ -25,11 +25,10 @@ namespace NullCheckRemover
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
             context.RegisterSyntaxNodeAction(AnalyzeConstructor, SyntaxKind.ConstructorDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
 
-
+            //context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
+            //context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
             //context.RegisterSyntaxNodeAction(AnalyzeParenthesizedLambda, SyntaxKind.ParenthesizedLambdaExpression);
             //context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
         }
@@ -87,7 +86,9 @@ namespace NullCheckRemover
 
             foreach (var location in locations)
             {
-                var diagnostic = Diagnostic.Create(Rule, location, "АУФ");
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                var diagnostic = Diagnostic.Create(Rule, location);
                 context.ReportDiagnostic(diagnostic);
             }
         }
