@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -21,55 +22,50 @@ namespace NullCheckRemover
 
         private void ConsumeAnalyzeResult(AnalyzeResult result)
         {
-            if(result.NeedFix)
+            if (result.NeedFix)
                 _diagnosticLocations.Add(result.DiagnosticLocation!);
         }
+
+        private void ProceedAnalyze(Func<AnalyzeResult> analyzeCall)
+        {
+            var analyzeResult = analyzeCall.Invoke();
+            ConsumeAnalyzeResult(analyzeResult);
+        }
+
         public override void VisitBinaryExpression(BinaryExpressionSyntax node)
         {
             base.VisitBinaryExpression(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
 
         public override void VisitConstantPattern(ConstantPatternSyntax node)
         {
             base.VisitConstantPattern(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
 
         public override void VisitRecursivePattern(RecursivePatternSyntax node)
         {
             base.VisitRecursivePattern(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
 
         public override void VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
         {
             base.VisitConditionalAccessExpression(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
 
         public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
         {
             base.VisitAssignmentExpression(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
 
         public override void VisitSwitchStatement(SwitchStatementSyntax node)
         {
             base.VisitSwitchStatement(node);
-
-            var analyzeResult = _nullAnalyzer.Analyze(node);
-            ConsumeAnalyzeResult(analyzeResult);
+            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
         }
     }
 }

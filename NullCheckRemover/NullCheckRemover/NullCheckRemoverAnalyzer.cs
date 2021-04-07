@@ -24,8 +24,7 @@ namespace NullCheckRemover
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeConstructor, SyntaxKind.ConstructorDeclaration);
+            context.RegisterSyntaxNodeAction(AnalyzeBaseMethod, SyntaxKind.MethodDeclaration, SyntaxKind.ConstructorDeclaration, SyntaxKind.OperatorDeclaration, SyntaxKind.ConversionOperatorDeclaration, SyntaxKind.DestructorDeclaration);
             context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
 
             //context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
@@ -36,42 +35,35 @@ namespace NullCheckRemover
         private static void AnalyzeSimpleLambda(SyntaxNodeAnalysisContext context)
         {
             var simpleLambda = (SimpleLambdaExpressionSyntax) context.Node;
-            var parameters = simpleLambda.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            var parameters = simpleLambda.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 
         private static void AnalyzeParenthesizedLambda(SyntaxNodeAnalysisContext context)
         {
             var parenthesizedLambda = (ParenthesizedLambdaExpressionSyntax)context.Node;
-            var parameters = parenthesizedLambda.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            var parameters = parenthesizedLambda.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 
         private static void AnalyzeLocalMethod(SyntaxNodeAnalysisContext context)
         {
             var localMethod = (LocalFunctionStatementSyntax)context.Node;
-            var parameters = localMethod.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            var parameters = localMethod.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 
-        private static void AnalyzeConstructor(SyntaxNodeAnalysisContext context)
+        private static void AnalyzeBaseMethod(SyntaxNodeAnalysisContext context)
         {
-            var constructor = (ConstructorDeclarationSyntax) context.Node;
-            var parameters = constructor.GetReferenceTypeParameters(context.SemanticModel).ToList();
-            AnalyzeParameterizedMember(context, parameters);
-        }
-
-        private static void AnalyzeMethod(SyntaxNodeAnalysisContext context)
-        {
-            var method = (MethodDeclarationSyntax) context.Node;
-            var parameters = method.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            var method = (BaseMethodDeclarationSyntax) context.Node;
+            var parameters = method.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 
         private static void AnalyzeIndexer(SyntaxNodeAnalysisContext context)
         {
             var indexer = (IndexerDeclarationSyntax) context.Node;
-            var parameters = indexer.GetReferenceTypeParameters(context.SemanticModel).ToList();
+            var parameters = indexer.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 

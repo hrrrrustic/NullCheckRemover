@@ -8,7 +8,7 @@ namespace NullCheckRemover
         public Location? DiagnosticLocation { get; }
         public bool NeedFix { get; }
 
-        private AnalyzeResult(Location? diagnosticLocation, Boolean needFix)
+        private AnalyzeResult(Location? diagnosticLocation, bool needFix)
         {
             DiagnosticLocation = diagnosticLocation;
             NeedFix = needFix;
@@ -16,11 +16,5 @@ namespace NullCheckRemover
 
         public static AnalyzeResult False() => new(null, false);
         public static AnalyzeResult True(Location location) => new(location, true);
-
-        public void DoIfPositive(Action<AnalyzeResult> action)
-        {
-            if(NeedFix)
-                action.Invoke(this);
-        }
     }
 }
