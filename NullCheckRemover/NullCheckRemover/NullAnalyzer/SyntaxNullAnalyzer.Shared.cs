@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace NullCheckRemover.SyntaxNullAnalyzer
+namespace NullCheckRemover.NullAnalyzer
 {
     public partial class SyntaxNullAnalyzer
     {
