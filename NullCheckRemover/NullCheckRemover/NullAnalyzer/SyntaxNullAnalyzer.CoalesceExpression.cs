@@ -6,12 +6,9 @@ namespace NullCheckRemover.NullAnalyzer
 {
     public partial class SyntaxNullAnalyzer
     {
-        public AnalyzeResult Analyze(AssignmentExpressionSyntax assignmentExpressionSyntax)
-        {
-            if (!assignmentExpressionSyntax.IsKind(SyntaxKind.CoalesceAssignmentExpression))
-                return AnalyzeResult.False();
-
-            return AnalyzeOperand(assignmentExpressionSyntax.Left, assignmentExpressionSyntax);
-        }
+        public AnalyzeResult Analyze(AssignmentExpressionSyntax assignmentExpressionSyntax) 
+            => assignmentExpressionSyntax.IsKind(SyntaxKind.CoalesceAssignmentExpression) ? 
+                AnalyzeOperand(assignmentExpressionSyntax.Left, assignmentExpressionSyntax.OperatorToken) : 
+                AnalyzeResult.False();
     }
 }

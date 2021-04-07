@@ -25,9 +25,15 @@ namespace NullCheckRemover.NullAnalyzer
             return IsInterestingForAnalyze(symbol);
         }
 
-        private AnalyzeResult AnalyzeOperand(ExpressionSyntax operand, ExpressionSyntax nodeForLocationOnSuccess) 
+        private AnalyzeResult AnalyzeOperand(ExpressionSyntax operand, SyntaxNode nodeForLocationOnSuccess)
+            => AnalyzeOperandPrivate(operand, nodeForLocationOnSuccess.GetLocation());
+
+        private AnalyzeResult AnalyzeOperand(ExpressionSyntax operand, SyntaxToken tokenForLocationOnSuccess)
+            => AnalyzeOperandPrivate(operand, tokenForLocationOnSuccess.GetLocation());
+
+        private AnalyzeResult AnalyzeOperandPrivate(ExpressionSyntax operand, Location location)
             => IsInterestingForAnalyze(operand) ? 
-                AnalyzeResult.True(nodeForLocationOnSuccess.GetLocation()) : 
+                AnalyzeResult.True(location) : 
                 AnalyzeResult.False();
     }
 }

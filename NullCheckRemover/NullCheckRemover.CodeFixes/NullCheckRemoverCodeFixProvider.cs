@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Editing;
+using NullCheckRemover.NullFixer;
 
 namespace NullCheckRemover
 {
@@ -33,66 +34,52 @@ namespace NullCheckRemover
 
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            Debugger.Launch();
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-
             var diagnostics = context
                 .Diagnostics
                 .Where(k => FixableDiagnosticIds.Contains(k.Id))
                 .ToList();
 
-            var locations = diagnostics.Select(k => k.Location).ToList();
+            var el = diagnostics.First();
+
+            var node = root.FindNode(el.Location.SourceSpan);
+
             context.RegisterCodeFix(
                 CodeAction.Create(
                     CodeFixResources.CodeFixTitle,
-                    x => RemoveRedundantNullChecks(context, locations, context.CancellationToken),
+                    x => RemoveRedundantNullChecks(context, node, context.CancellationToken),
                     nameof(CodeFixResources.CodeFixTitle)), 
                 diagnostics);
         }
 
-        private async Task<Solution> MakeUppercaseAsync(Document document, TypeDeclarationSyntax typeDecl, CancellationToken cancellationToken)
+        private async Task<Document> RemoveRedundantNullChecks(CodeFixContext context, SyntaxNode nodeForFix, CancellationToken token)
         {
-            // Compute new uppercase name.
-            var identifierToken = typeDecl.Identifier;
-            var newName = identifierToken.Text.ToUpperInvariant();
-
-            // Get the symbol representing the type to be renamed.
-            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            var typeSymbol = semanticModel.GetDeclaredSymbol(typeDecl, cancellationToken);
-
-            // Produce a new solution that has all references to that type renamed, including the declaration.
-            var originalSolution = document.Project.Solution;
-            var optionSet = originalSolution.Workspace.Options;
-            
-            var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, typeSymbol, newName, optionSet, cancellationToken).ConfigureAwait(false);
-
-            // Return the new solution with the now-uppercase type name.
-            return newSolution;
-        }
-
-        private async Task<Document> RemoveRedundantNullChecks(CodeFixContext context, IReadOnlyList<Location> locations, CancellationToken token)
-        {
-            var root = await context.Document.GetSyntaxRootAsync(token).ConfigureAwait(false);
             var editor = await DocumentEditor.CreateAsync(context.Document, token);
-            foreach (Location location in locations)
+            var fixer = new SyntaxNullFixer(editor);
+
+            return nodeForFix switch
             {
-                var node = root.FindNode(location.SourceSpan);
-                if (node is BinaryExpressionSyntax eq)
-                {
-                    BinaryFix(eq, editor);
-                }
-                else if (node is IsPatternExpressionSyntax patter)
-                {
-                    IsPatternFix(patter, editor);
-                }
-                else if (node is SwitchExpressionArmSyntax arm)
-                {
-                    SwitchFix(arm, editor);
-                }
-                else if (node is CaseSwitchLabelSyntax label)
-                {
-                    SwitchFix(label, editor);
-                }
+                BinaryExpressionSyntax binary => fixer.Fix(binary),
+                CaseSwitchLabelSyntax caseSwitch => fixer.Fix(caseSwitch),
+                ConditionalAccessExpressionSyntax conditionalAccess => fixer.Fix(conditionalAccess),
+                AssignmentExpressionSyntax assignmentExpressionSyntax => fixer.Fix(assignmentExpressionSyntax)
+            };
+
+            if (nodeForFix is BinaryExpressionSyntax eq)
+            {
+                return fixer.Fix(eq);
+            }
+            else if (nodeForFix is IsPatternExpressionSyntax patter)
+            {
+                IsPatternFix(patter, editor);
+            }
+            else if (nodeForFix is SwitchExpressionArmSyntax arm)
+            {
+                SwitchFix(arm, editor);
+            }
+            else if (nodeForFix is CaseSwitchLabelSyntax label)
+            {
+                return fixer.Fix(label);
             }
 
             return editor.GetChangedDocument();
@@ -117,43 +104,9 @@ namespace NullCheckRemover
             }
         }
 
-        private void BinaryFix(BinaryExpressionSyntax eq, DocumentEditor editor)
-        {
-            if (eq.OperatorToken.IsKind(SyntaxKind.EqualsEqualsToken))
-            {
-                var trueExpression = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
-                editor.ReplaceNode(eq, trueExpression);
-            }
-            else if(eq.OperatorToken.IsKind(SyntaxKind.ExclamationEqualsToken))
-            {
-                var falseExpression = SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
-                editor.ReplaceNode(eq, falseExpression);
-            }
-            else
-            {
-                var withoutCoalesce = eq.Right;
-                editor.ReplaceNode(eq, withoutCoalesce);
-            }
-        }
-
         private Document SwitchFix(SwitchExpressionArmSyntax arm, DocumentEditor editor)
         {
             editor.RemoveNode(arm);
-            return editor.GetChangedDocument();
-        }
-
-        private Document SwitchFix(CaseSwitchLabelSyntax label, DocumentEditor editor)
-        {
-            var section = label.Ancestors().OfType<SwitchSectionSyntax>().First();
-            if (section.Labels.Count == 1)
-            {
-                editor.RemoveNode(section);
-            }
-            else
-            {
-                editor.RemoveNode(label);
-            }
-
             return editor.GetChangedDocument();
         }
     }
