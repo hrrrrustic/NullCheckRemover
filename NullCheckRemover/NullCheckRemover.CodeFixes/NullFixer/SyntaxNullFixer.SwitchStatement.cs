@@ -13,10 +13,21 @@ namespace NullCheckRemover.NullFixer
         {
             var section = caseSwitchLabelSyntax.Ancestors().OfType<SwitchSectionSyntax>().First();
             return SectionHasOnlyOneLabel(section) ? 
-                ApplyFix(section) : 
+                Fix(section) : 
                 ApplyFix(caseSwitchLabelSyntax);
         }
 
+        private Document Fix(SwitchSectionSyntax switchSectionSyntax)
+        {
+            var switchStatement = switchSectionSyntax.Ancestors().OfType<SwitchStatementSyntax>().First();
+
+            return SwitchHasOnlyOneSection(switchStatement) ? 
+                ApplyFix(switchStatement) : 
+                ApplyFix(switchSectionSyntax);
+        }
+
+        private bool SwitchHasOnlyOneSection(SwitchStatementSyntax switchStatementSyntax)
+            => switchStatementSyntax.Sections.Count == 1;
         private bool SectionHasOnlyOneLabel(SwitchSectionSyntax switchSectionSyntax) 
             => switchSectionSyntax.Labels.Count == 1;
     }
