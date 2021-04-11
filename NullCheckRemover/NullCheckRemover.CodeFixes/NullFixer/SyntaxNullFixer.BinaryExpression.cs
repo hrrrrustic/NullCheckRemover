@@ -18,7 +18,7 @@ namespace NullCheckRemover.NullFixer
         private Document FixCoalesce(BinaryExpressionSyntax binaryExpressionSyntax)
         {
             var onlyRightPart = binaryExpressionSyntax.Right;
-            return ApplyFix(binaryExpressionSyntax, onlyRightPart);
+            return ReplaceNode(binaryExpressionSyntax, onlyRightPart);
         }
 
         private Document FixComparing(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind comparingExpression)
@@ -38,7 +38,7 @@ namespace NullCheckRemover.NullFixer
         private Document FixComparing(SyntaxKind literalForReplace, BinaryExpressionSyntax originalNode)
         {
             var nodeForReplace = SyntaxFactory.LiteralExpression(literalForReplace);
-            return ApplyFix(originalNode, nodeForReplace);
+            return ReplaceNode(originalNode, nodeForReplace);
         }
 
         private Document FixWithBlockSimplifying(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind literalForReplace)
@@ -46,41 +46,53 @@ namespace NullCheckRemover.NullFixer
             if (binaryExpressionSyntax.Parent is IfStatementSyntax ifStatement)
                 return InlineIf(ifStatement, literalForReplace);
 
+            if (binaryExpressionSyntax.Parent is ConditionalExpressionSyntax conditional)
+                return InlineConditional(conditional, literalForReplace);
+
             return FixComparing(literalForReplace, binaryExpressionSyntax);
         }
 
-        private Document InlineIf(IfStatementSyntax ifStatement, SyntaxKind comparingExpression)
-        {
-            return (ifStatement.Else is null, comparingExpression) switch
+        private Document InlineConditional(ConditionalExpressionSyntax conditional, SyntaxKind comparingExpression) 
+            => comparingExpression switch
             {
-                (true, SyntaxKind.EqualsExpression) => ApplyFix(ifStatement),
+                SyntaxKind.EqualsExpression => InlineConditionalPart(conditional, false),
+                SyntaxKind.NotEqualsExpression => InlineConditionalPart(conditional, true)
+            };
+
+        private Document InlineConditionalPart(ConditionalExpressionSyntax conditional, bool conditionValue)
+        {
+            var nodeForInline = conditionValue ? conditional.WhenTrue : conditional.WhenFalse;
+            return ReplaceNode(conditional, nodeForInline);
+        }
+
+        private Document InlineIf(IfStatementSyntax ifStatement, SyntaxKind comparingExpression) 
+            => (ifStatement.Else is null, comparingExpression) switch
+            {
+                (true, SyntaxKind.EqualsExpression) => RemoveNode(ifStatement),
                 (true, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
                 (false, SyntaxKind.EqualsExpression) => InlineElse(ifStatement),
                 (false, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
             };
-        }
 
         private Document InlineElse(IfStatementSyntax ifStatement)
         {
             var elseNode = ifStatement.Else;
             if (elseNode!.Statement is IfStatementSyntax elseIf)
-                return ApplyFix(ifStatement, elseIf);
+                return ReplaceNode(ifStatement, elseIf);
 
             return InlineNodes(ifStatement, elseNode.Statement.ChildNodes());
         }
 
         private Document InlineIf(IfStatementSyntax ifStatement) => InlineNodes(ifStatement, ifStatement.Statement.ChildNodes());
 
-        private Document FixComplexBinaryExpression(BinaryExpressionSyntax node, BinaryExpressionSyntax parentBinary)
-        {
-            return (node.Kind(), parentBinary.Kind()) switch
+        private Document FixComplexBinaryExpression(BinaryExpressionSyntax node, BinaryExpressionSyntax parentBinary) 
+            => (node.Kind(), parentBinary.Kind()) switch
             {
-                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => _editor.OriginalDocument,
-                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalAndExpression) => ApplyFix(parentBinary, parentBinary.Right),
-                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalOrExpression) => ApplyFix(parentBinary, parentBinary.Right),
-                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => _editor.OriginalDocument,
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => FixComparing(SyntaxKind.FalseLiteralExpression, node),
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalAndExpression) => ReplaceNode(parentBinary, parentBinary.Right),
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalOrExpression) => ReplaceNode(parentBinary, parentBinary.Right),
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => FixComparing(SyntaxKind.TrueLiteralExpression, node),
                 _ => _editor.OriginalDocument
             };
-        }
     }
 }

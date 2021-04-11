@@ -11,7 +11,7 @@ namespace NullCheckRemover.NullFixer
             var leftPart = conditionalAccessExpressionSyntax.Expression.ToFullString();
             var rightPart = conditionalAccessExpressionSyntax.WhenNotNull.ToFullString();
             var withoutNullCheck = SyntaxFactory.ParseExpression(leftPart + rightPart);
-            return ApplyFix(conditionalAccessExpressionSyntax, withoutNullCheck);
+            return ReplaceNode(conditionalAccessExpressionSyntax, withoutNullCheck);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace NullCheckRemover.NullFixer
             _editor = editor;
         }
 
-        private Document ApplyFix(SyntaxNode oldNode, SyntaxNode newNode, bool normalizeWhitespace = true)
+        private Document ReplaceNode(SyntaxNode oldNode, SyntaxNode newNode, bool normalizeWhitespace = true)
         {
             if (normalizeWhitespace)
                 newNode = newNode.NormalizeWhitespace();
@@ -24,7 +24,7 @@ namespace NullCheckRemover.NullFixer
             return _editor.GetChangedDocument();
         }
 
-        private Document ApplyFix(SyntaxNode forRemoving)
+        private Document RemoveNode(SyntaxNode forRemoving)
         {
             _editor.RemoveNode(forRemoving);
             return _editor.GetChangedDocument();

@@ -64,9 +64,9 @@ namespace NullCheckRemover.NullFixer
             => SyntaxFactory.AreEquivalent(firstIdentifier, ((IdentifierNameSyntax) coalesce.Left).Identifier);
 
         private Document ReplaceWithLeftPart(AssignmentExpressionSyntax assignmentExpressionSyntax) 
-            => ApplyFix(assignmentExpressionSyntax, assignmentExpressionSyntax.Left);
+            => ReplaceNode(assignmentExpressionSyntax, assignmentExpressionSyntax.Left);
 
         private Document RemoveCoalesceExpression(StatementSyntax assignmentParentStatement) 
-            => ApplyFix(assignmentParentStatement);
+            => RemoveNode(assignmentParentStatement);
     }
 }

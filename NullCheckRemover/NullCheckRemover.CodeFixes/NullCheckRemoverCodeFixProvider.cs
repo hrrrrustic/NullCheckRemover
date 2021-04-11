@@ -49,7 +49,8 @@ namespace NullCheckRemover
                 BinaryExpressionSyntax binary => fixer.Fix(binary),
                 CaseSwitchLabelSyntax caseSwitch => fixer.Fix(caseSwitch),
                 ConditionalAccessExpressionSyntax conditionalAccess => fixer.Fix(conditionalAccess),
-                AssignmentExpressionSyntax assignmentExpressionSyntax => fixer.Fix(assignmentExpressionSyntax)
+                AssignmentExpressionSyntax assignmentExpressionSyntax => fixer.Fix(assignmentExpressionSyntax),
+                _ => editor.OriginalDocument
             };
         }
     }

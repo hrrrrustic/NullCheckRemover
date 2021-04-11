@@ -28,44 +28,24 @@ namespace NullCheckRemover
 
         private void ProceedAnalyze(Func<AnalyzeResult> analyzeCall)
         {
-            var analyzeResult = analyzeCall.Invoke();
-            ConsumeAnalyzeResult(analyzeResult);
+            try
+            {
+                var analyzeResult = analyzeCall.Invoke();
+                ConsumeAnalyzeResult(analyzeResult);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
-        public override void VisitBinaryExpression(BinaryExpressionSyntax node)
+        public override void Visit(SyntaxNode? node)
         {
-            base.VisitBinaryExpression(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
-        }
+            base.Visit(node);
 
-        public override void VisitConstantPattern(ConstantPatternSyntax node)
-        {
-            base.VisitConstantPattern(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
-        }
-
-        public override void VisitRecursivePattern(RecursivePatternSyntax node)
-        {
-            base.VisitRecursivePattern(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
-        }
-
-        public override void VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
-        {
-            base.VisitConditionalAccessExpression(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
-        }
-
-        public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
-        {
-            base.VisitAssignmentExpression(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
-        }
-
-        public override void VisitSwitchStatement(SwitchStatementSyntax node)
-        {
-            base.VisitSwitchStatement(node);
-            ProceedAnalyze(() => _nullAnalyzer.Analyze(node));
+            var analyzer = _nullAnalyzer.GetAnalyzerFor(node);
+            ProceedAnalyze(analyzer);
         }
     }
 }

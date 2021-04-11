@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,6 +16,18 @@ namespace NullCheckRemover.NullAnalyzer
             _semantic = semantic;
             _parameters = parameters;
         }
+
+        public Func<AnalyzeResult> GetAnalyzerFor<T>(T? node) where T : SyntaxNode
+            => node switch
+            {
+                SwitchStatementSyntax switchStatement => () => Analyze(switchStatement),
+                BinaryExpressionSyntax binaryExpression => () => Analyze(binaryExpression),
+                ConditionalAccessExpressionSyntax conditionalAccess => () => Analyze(conditionalAccess),
+                AssignmentExpressionSyntax assignmentExpression => () => Analyze(assignmentExpression),
+                RecursivePatternSyntax recursivePattern => () => Analyze(recursivePattern),
+                ConstantPatternSyntax constantPattern => () => Analyze(constantPattern),
+                _ => AnalyzeResult.False
+            };
 
         private bool IsInterestingForAnalyze(ISymbol? symbol) 
             => _parameters.Any(k => SymbolEqualityComparer.Default.Equals(k, symbol));

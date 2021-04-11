@@ -11,7 +11,7 @@ namespace NullCheckRemover.NullFixer
             var section = caseSwitchLabelSyntax.Ancestors().OfType<SwitchSectionSyntax>().First();
             return SectionHasOnlyOneLabel(section) ? 
                 Fix(section) : 
-                ApplyFix(caseSwitchLabelSyntax);
+                RemoveNode(caseSwitchLabelSyntax);
         }
 
         private Document Fix(SwitchSectionSyntax switchSectionSyntax)
@@ -19,8 +19,8 @@ namespace NullCheckRemover.NullFixer
             var switchStatement = switchSectionSyntax.Ancestors().OfType<SwitchStatementSyntax>().First();
 
             return SwitchHasOnlyOneSection(switchStatement) ? 
-                ApplyFix(switchStatement) : 
-                ApplyFix(switchSectionSyntax);
+                RemoveNode(switchStatement) : 
+                RemoveNode(switchSectionSyntax);
         }
 
         private bool SwitchHasOnlyOneSection(SwitchStatementSyntax switchStatementSyntax)
