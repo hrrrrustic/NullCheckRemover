@@ -38,25 +38,19 @@ namespace NullCheckRemover.NullAnalyzer
             return IsInterestingForAnalyze(operand);
         }
 
-        private ExpressionSyntax GetPatternMatchingOperand<T>(T patternSyntax) where T : PatternSyntax
+        private ExpressionSyntax GetPatternMatchingOperand(PatternSyntax patternSyntax)
         {
-            SyntaxNode? current = patternSyntax;
+            return GetOperand(patternSyntax);
 
-            while (true)
-            {
-                switch (current)
+            // Вынес, чтобы сам вход в метод был немного типизированнее
+            static ExpressionSyntax GetOperand(SyntaxNode node) 
+                => node switch
                 {
-                    case IsPatternExpressionSyntax isPattern:
-                        return isPattern.Expression;
-                    case SwitchExpressionSyntax switchExpression:
-                        return switchExpression.GoverningExpression;
-                    case null:
-                        throw new NotSupportedException();
-                    default:
-                        current = current.Parent;
-                        break;
-                }
-            }
+                    IsPatternExpressionSyntax isPattern => isPattern.Expression,
+                    SwitchExpressionSyntax switchExpression => switchExpression.GoverningExpression,
+                    { } unInterestingNode => GetOperand(unInterestingNode.Parent),
+                    null => throw new NotSupportedException("Паттерн матчинг не внутри свитча/is паттерна не реализован")
+                };
         }
     }
 }

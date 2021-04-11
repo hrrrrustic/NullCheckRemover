@@ -11,6 +11,8 @@ namespace NullCheckRemover.NullFixer
                 FixWithParent(assignmentExpressionSyntax.Parent, assignmentExpressionSyntax) : 
                 _editor.OriginalDocument;
 
+        // Ниже анализ используется ли возвращаемое значение оператора ??= (и кем).
+        // В зависимости от результата могу вообще удалить все, а могу оставить только левую часть
         private Document FixWithParent(SyntaxNode? currentParent, AssignmentExpressionSyntax coalesce) 
             => currentParent switch
             {
@@ -56,6 +58,9 @@ namespace NullCheckRemover.NullFixer
 
             var variable = declaration.Variables.First();
 
+            // Анализ каких-то совсем стремных конструкций типа args = args ??= new()
+            // В таком случае можно полностью удалить строку. А вот если будет var x = args ??= new()
+            // Тогда надо оставлять левую часть ??=
             return IsSameIdentifiers(variable.Identifier, coalesce) ?
                 RemoveCoalesceExpression(declarationStatement) :
                 ReplaceWithLeftPart(coalesce);

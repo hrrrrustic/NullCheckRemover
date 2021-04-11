@@ -21,13 +21,13 @@ namespace NullCheckRemover.NullAnalyzer
             var leftKind = binaryExpressionSyntax.Left.Kind();
             var rightKind = binaryExpressionSyntax.Right.Kind();
 
-            var leftIsInteresting = leftKind is SyntaxKind.DefaultLiteralExpression or SyntaxKind.NullLiteralExpression;
-            var rightIsInteresting = rightKind is SyntaxKind.DefaultLiteralExpression or SyntaxKind.NullLiteralExpression;
+            var leftIsInterestingConstant = leftKind is SyntaxKind.DefaultLiteralExpression or SyntaxKind.NullLiteralExpression;
+            var rightIsInterestingConstant = rightKind is SyntaxKind.DefaultLiteralExpression or SyntaxKind.NullLiteralExpression;
 
-            if (!leftIsInteresting && !rightIsInteresting)
+            if (!leftIsInterestingConstant && !rightIsInterestingConstant)
                 return AnalyzeResult.False();
 
-            var nodeForSearching = leftIsInteresting ? binaryExpressionSyntax.Right : binaryExpressionSyntax.Left;
+            var nodeForSearching = leftIsInterestingConstant ? binaryExpressionSyntax.Right : binaryExpressionSyntax.Left;
 
             return AnalyzeOperand(nodeForSearching, binaryExpressionSyntax);
         }

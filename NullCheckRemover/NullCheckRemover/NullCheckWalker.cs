@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NullCheckRemover.NullAnalyzer;
 
 namespace NullCheckRemover
@@ -35,8 +34,7 @@ namespace NullCheckRemover
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                // Здесь должно быть логирование
             }
         }
 

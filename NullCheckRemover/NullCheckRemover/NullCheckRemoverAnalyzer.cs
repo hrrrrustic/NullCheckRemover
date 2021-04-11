@@ -20,7 +20,7 @@ namespace NullCheckRemover
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description);
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
-        private readonly SyntaxKind[] SupportedNodesForAnalyze =
+        private readonly SyntaxKind[] _supportedNodesForAnalyze =
         {
             SyntaxKind.MethodDeclaration, SyntaxKind.ConstructorDeclaration, SyntaxKind.OperatorDeclaration, 
             SyntaxKind.ConversionOperatorDeclaration, SyntaxKind.DestructorDeclaration,SyntaxKind.LocalFunctionStatement, 
@@ -31,7 +31,7 @@ namespace NullCheckRemover
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            context.RegisterSyntaxNodeAction(AnalyzeNode, SupportedNodesForAnalyze);
+            context.RegisterSyntaxNodeAction(AnalyzeNode, _supportedNodesForAnalyze);
             context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
         }
 

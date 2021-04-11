@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
-using System.Linq;
 
 namespace NullCheckRemover.NullFixer
 {
@@ -41,6 +40,7 @@ namespace NullCheckRemover.NullFixer
             return _editor.GetChangedDocument();
         }
 
+        // Табуляция будет съезжать ;(
         private Document InlineNodes(SyntaxNode current, IEnumerable<SyntaxNode> statesForInline)
         {
             _editor.InsertBefore(current, statesForInline);

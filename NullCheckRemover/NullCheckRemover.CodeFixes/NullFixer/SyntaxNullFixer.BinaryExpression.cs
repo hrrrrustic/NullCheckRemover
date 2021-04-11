@@ -30,13 +30,14 @@ namespace NullCheckRemover.NullFixer
             return FixWithBlockSimplifying(binaryExpressionSyntax, expressionResultAfterFix);
         }
 
-        private Document FixComparing(bool expressionResultAfterFix, BinaryExpressionSyntax originalNode)
+        private Document FixSimpleComparing(BinaryExpressionSyntax originalNode, bool expressionResultAfterFix)
         {
             var literalKind = expressionResultAfterFix ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression;
             var nodeForReplace = SyntaxFactory.LiteralExpression(literalKind);
             return ReplaceNode(originalNode, nodeForReplace);
         }
 
+        // Попытка немного упростить выражения после удаления проверки
         private Document FixWithBlockSimplifying(BinaryExpressionSyntax binaryExpressionSyntax, bool expressionResultAfterFix)
         {
             if (binaryExpressionSyntax.Parent is IfStatementSyntax ifStatement)
@@ -45,7 +46,7 @@ namespace NullCheckRemover.NullFixer
             if (binaryExpressionSyntax.Parent is ConditionalExpressionSyntax conditional)
                 return InlineConditional(conditional, expressionResultAfterFix);
 
-            return FixComparing(expressionResultAfterFix, binaryExpressionSyntax);
+            return FixSimpleComparing(binaryExpressionSyntax, expressionResultAfterFix);
         }
 
         private Document InlineConditional(ConditionalExpressionSyntax conditional, bool conditionValue)
@@ -80,10 +81,10 @@ namespace NullCheckRemover.NullFixer
         private Document FixComplexBinaryExpression(BinaryExpressionSyntax node, BinaryExpressionSyntax parentBinary) 
             => (node.Kind(), parentBinary.Kind()) switch
             {
-                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => FixComparing(false, node),
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => FixSimpleComparing(node, false),
                 (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalAndExpression) => ReplaceNode(parentBinary, parentBinary.Right),
                 (SyntaxKind.EqualsExpression, SyntaxKind.LogicalOrExpression) => ReplaceNode(parentBinary, parentBinary.Right),
-                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => FixComparing(true, node),
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => FixSimpleComparing(node, true),
                 _ => _editor.OriginalDocument
             };
     }

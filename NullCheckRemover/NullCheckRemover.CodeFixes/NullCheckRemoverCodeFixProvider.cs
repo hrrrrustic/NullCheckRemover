@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -51,9 +50,10 @@ namespace NullCheckRemover
                 var fix = fixer.GetFixerFor(node);
                 return fix.Invoke();
             }
+            // Здесь должно быть логирование как минимум. А еще неплохо было бы какое-то уведомление выдать, что не работает
+            // Но не успел :(
             catch (Exception e)
             {
-                Console.WriteLine(e);
                 return editor.OriginalDocument;
             }
         }

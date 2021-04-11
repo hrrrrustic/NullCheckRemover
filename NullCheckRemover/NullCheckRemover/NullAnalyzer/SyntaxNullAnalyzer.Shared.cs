@@ -34,6 +34,10 @@ namespace NullCheckRemover.NullAnalyzer
 
         private bool IsEqualsSymbol(ISymbol? first, ISymbol? second) => SymbolEqualityComparer.Default.Equals(first, second);
 
+        // Это очень ненаджно, уверен, что можно сделать коллизии в лямбдах.
+        // Но метод выше упорно отказывается возвращать true для индексера и лямбд
+        // Хотя если смотреть в дебаге, то там действительно одинаковые значения
+        // Но ссылки разные :(
         private bool UnsafeIsEqualsSymbolByName(ISymbol? first, ISymbol? second) => first?.Name == second?.Name;
 
         private bool IsInterestingForAnalyze(ExpressionSyntax expression)
