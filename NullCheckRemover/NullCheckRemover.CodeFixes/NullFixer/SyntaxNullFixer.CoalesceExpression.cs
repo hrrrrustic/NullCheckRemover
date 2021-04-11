@@ -11,13 +11,14 @@ namespace NullCheckRemover.NullFixer
                 FixWithParent(assignmentExpressionSyntax.Parent, assignmentExpressionSyntax) : 
                 _editor.OriginalDocument;
 
-        private Document FixWithParent(SyntaxNode currentParent, AssignmentExpressionSyntax coalesce) 
+        private Document FixWithParent(SyntaxNode? currentParent, AssignmentExpressionSyntax coalesce) 
             => currentParent switch
             {
                 ParenthesizedExpressionSyntax parenthesized => FixWithParent(parenthesized.Parent, coalesce),
                 StatementSyntax statement => FixCoalesceWithParentStatement(statement, coalesce),
                 ExpressionSyntax expression => FixCoalesceWithParentExpression(expression, coalesce),
-                { } unInterestingNode => FixWithParent(unInterestingNode.Parent, coalesce)
+                { } unInterestingNode => FixWithParent(unInterestingNode.Parent, coalesce),
+                null => ReplaceWithLeftPart(coalesce)
             };
 
         private Document FixCoalesceWithParentStatement(StatementSyntax statement, AssignmentExpressionSyntax coalesce) 

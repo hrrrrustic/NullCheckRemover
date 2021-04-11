@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
     <RootNamespace>NullCheckRemover</RootNamespace>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
@@ -14,6 +15,16 @@ namespace NullCheckRemover.NullFixer
         {
             _editor = editor;
         }
+
+        public Func<Document> GetFixerFor<T>(T? node) where T : SyntaxNode
+            => node switch
+            {
+                BinaryExpressionSyntax binaryExpression => () => Fix(binaryExpression),
+                AssignmentExpressionSyntax assignmentExpression => () => Fix(assignmentExpression),
+                ConditionalAccessExpressionSyntax conditionalAccess => () => Fix(conditionalAccess),
+                CaseSwitchLabelSyntax switchLabel => () => Fix(switchLabel),
+                _ => () => _editor.OriginalDocument
+            };
 
         private Document ReplaceNode(SyntaxNode oldNode, SyntaxNode newNode, bool normalizeWhitespace = true)
         {

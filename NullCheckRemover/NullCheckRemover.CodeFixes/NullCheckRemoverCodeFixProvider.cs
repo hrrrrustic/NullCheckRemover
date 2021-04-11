@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -22,36 +23,39 @@ namespace NullCheckRemover
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-            var diagnostics = context
+            var diagnostic = context
                 .Diagnostics
-                .Where(k => FixableDiagnosticIds.Contains(k.Id))
-                .ToList();
+                .First(k => FixableDiagnosticIds.Contains(k.Id));
 
-            var el = diagnostics.First();
-
-            var node = root.FindNode(el.Location.SourceSpan);
+            var node = root!.FindNode(diagnostic.Location.SourceSpan);
 
             context.RegisterCodeFix(
                 CodeAction.Create(
                     CodeFixResources.CodeFixTitle,
                     x => RemoveRedundantNullChecks(context, node, context.CancellationToken),
                     nameof(CodeFixResources.CodeFixTitle)), 
-                diagnostics);
+                diagnostic);
         }
 
         private async Task<Document> RemoveRedundantNullChecks(CodeFixContext context, SyntaxNode nodeForFix, CancellationToken token)
         {
             var editor = await DocumentEditor.CreateAsync(context.Document, token);
-            var fixer = new SyntaxNullFixer(editor);
+            return RemoveNullCheck(editor, nodeForFix);
+        }
 
-            return nodeForFix switch
+        private Document RemoveNullCheck(DocumentEditor editor, SyntaxNode? node)
+        {
+            try
             {
-                BinaryExpressionSyntax binary => fixer.Fix(binary),
-                CaseSwitchLabelSyntax caseSwitch => fixer.Fix(caseSwitch),
-                ConditionalAccessExpressionSyntax conditionalAccess => fixer.Fix(conditionalAccess),
-                AssignmentExpressionSyntax assignmentExpressionSyntax => fixer.Fix(assignmentExpressionSyntax),
-                _ => editor.OriginalDocument
-            };
+                var fixer = new SyntaxNullFixer(editor);
+                var fix = fixer.GetFixerFor(node);
+                return fix.Invoke();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return editor.OriginalDocument;
+            }
         }
     }
 }
