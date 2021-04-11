@@ -11,7 +11,10 @@ namespace NullCheckRemover.NullFixer
     {
         public Document Fix(ConditionalAccessExpressionSyntax conditionalAccessExpressionSyntax)
         {
-            return _editor.OriginalDocument;
+            var leftPart = conditionalAccessExpressionSyntax.Expression.ToFullString();
+            var rightPart = conditionalAccessExpressionSyntax.WhenNotNull.ToFullString();
+            var withoutNullCheck = SyntaxFactory.ParseExpression(leftPart + rightPart);
+            return ApplyFix(conditionalAccessExpressionSyntax, withoutNullCheck);
         }
     }
 }

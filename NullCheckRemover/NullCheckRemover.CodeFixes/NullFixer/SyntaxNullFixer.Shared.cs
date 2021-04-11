@@ -17,7 +17,7 @@ namespace NullCheckRemover.NullFixer
 
         private Document ApplyFix(SyntaxNode oldNode, SyntaxNode newNode)
         {
-            _editor.ReplaceNode(oldNode, newNode);
+            _editor.ReplaceNode(oldNode, newNode.NormalizeWhitespace());
             return _editor.GetChangedDocument();
         }
 

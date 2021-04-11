@@ -11,8 +11,8 @@ namespace NullCheckRemover.NullFixer
             => binaryExpressionSyntax.Kind() switch
             {
                 SyntaxKind.CoalesceExpression => FixCoalesce(binaryExpressionSyntax),
-                SyntaxKind.EqualsExpression => FixEquality(binaryExpressionSyntax),
-                SyntaxKind.NotEqualsExpression => FixNotEquality(binaryExpressionSyntax),
+                SyntaxKind.EqualsExpression => FixComplexBinaryExpression(binaryExpressionSyntax),
+                SyntaxKind.NotEqualsExpression => FixComplexBinaryExpression(binaryExpressionSyntax),
                 _ => _editor.OriginalDocument
             };
 
@@ -30,6 +30,21 @@ namespace NullCheckRemover.NullFixer
         {
             var nodeForReplace = SyntaxFactory.LiteralExpression(literalForReplace);
             return ApplyFix(originalNode, nodeForReplace);
+        }
+
+        private Document FixComplexBinaryExpression(BinaryExpressionSyntax node)
+        {
+            if (node.Parent is not BinaryExpressionSyntax parentBinary)
+                return _editor.OriginalDocument;
+
+            return (node.Kind(), parentBinary.Kind()) switch
+            {
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => _editor.OriginalDocument,
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalAndExpression) => ApplyFix(parentBinary, parentBinary.Right),
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalOrExpression) => ApplyFix(parentBinary, parentBinary.Right),
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => _editor.OriginalDocument,
+                _ => _editor.OriginalDocument
+            };
         }
     }
 }

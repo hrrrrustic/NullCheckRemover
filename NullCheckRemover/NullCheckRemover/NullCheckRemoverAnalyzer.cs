@@ -55,8 +55,8 @@ namespace NullCheckRemover
 
         private static void AnalyzeBaseMethod(SyntaxNodeAnalysisContext context)
         {
-            var method = (BaseMethodDeclarationSyntax) context.Node;
-            var parameters = method.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
+            var BaseMethod = (BaseMethodDeclarationSyntax) context.Node;
+            var parameters = BaseMethod.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 
