@@ -35,7 +35,6 @@ namespace NullCheckRemover
             context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
         }
 
-
         private static void AnalyzeNode(SyntaxNodeAnalysisContext context)
         {
             var parameters = context

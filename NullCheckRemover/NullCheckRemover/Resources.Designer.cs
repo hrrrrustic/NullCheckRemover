@@ -61,7 +61,7 @@ namespace NullCheckRemover {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Юзлесс проверка.
+        ///   Looks up a localized string similar to Анализ излишних проверок на null.
         /// </summary>
         internal static string AnalyzerDescription {
             get {
@@ -70,7 +70,7 @@ namespace NullCheckRemover {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Переменная &apos;{0}&apos; имеет лишнюю проверку на null.
+        ///   Looks up a localized string similar to Изишняя проверка на null.
         /// </summary>
         internal static string AnalyzerMessageFormat {
             get {
@@ -79,7 +79,7 @@ namespace NullCheckRemover {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Излишняя проверка на null.
+        ///   Looks up a localized string similar to Лишняя проверка на null.
         /// </summary>
         internal static string AnalyzerTitle {
             get {
