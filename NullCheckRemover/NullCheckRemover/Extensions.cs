@@ -8,22 +8,10 @@ namespace NullCheckRemover
 {
     public static class Extensions
     {
-        public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this BaseMethodDeclarationSyntax node, SemanticModel semantic)
-            => node.ParameterList.GetAvailableForAnalyzeParameters(semantic);
-
-        public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this IndexerDeclarationSyntax node, SemanticModel semantic) 
-            => node.ParameterList.GetAvailableForAnalyzeParameters(semantic);
-
-        public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this LocalFunctionStatementSyntax node, SemanticModel semantic) 
-            => node.ParameterList.GetAvailableForAnalyzeParameters(semantic);
-
-        public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this ParenthesizedLambdaExpressionSyntax node, SemanticModel semantic) 
-            => node.ParameterList.GetAvailableForAnalyzeParameters(semantic);
-
         public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this SimpleLambdaExpressionSyntax node, SemanticModel semantic) 
             => new List<ParameterSyntax>(1){node.Parameter}.WhereIsAvailableForAnalyze(semantic);
 
-        private static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this BaseParameterListSyntax parameters, SemanticModel semantic)
+        public static IEnumerable<IParameterSymbol> GetAvailableForAnalyzeParameters(this BaseParameterListSyntax parameters, SemanticModel semantic)
             => parameters.Parameters.WhereIsAvailableForAnalyze(semantic);
 
         public static IEnumerable<IParameterSymbol> WhereIsAvailableForAnalyze(this IEnumerable<ParameterSyntax> parameters, SemanticModel semantic) 

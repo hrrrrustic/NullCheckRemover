@@ -20,50 +20,41 @@ namespace NullCheckRemover
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, true, Description);
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
+        private readonly SyntaxKind[] SupportedNodesForAnalyze =
+        {
+            SyntaxKind.MethodDeclaration, SyntaxKind.ConstructorDeclaration, SyntaxKind.OperatorDeclaration, 
+            SyntaxKind.ConversionOperatorDeclaration, SyntaxKind.DestructorDeclaration,SyntaxKind.LocalFunctionStatement, 
+            SyntaxKind.IndexerDeclaration, SyntaxKind.ParenthesizedLambdaExpression
+        };
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(AnalyzeBaseMethod, SyntaxKind.MethodDeclaration, SyntaxKind.ConstructorDeclaration, SyntaxKind.OperatorDeclaration, SyntaxKind.ConversionOperatorDeclaration, SyntaxKind.DestructorDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
 
-            context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeParenthesizedLambda, SyntaxKind.ParenthesizedLambdaExpression);
+            context.RegisterSyntaxNodeAction(AnalyzeNode, SupportedNodesForAnalyze);
             context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
+        }
+
+
+        private static void AnalyzeNode(SyntaxNodeAnalysisContext context)
+        {
+            var parameters = context
+                .Node
+                .ChildNodes()
+                .OfType<BaseParameterListSyntax>()
+                .SingleOrDefault();
+            
+            if(parameters is null)
+                return;
+
+            var parametersForAnalyze = parameters.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
+            AnalyzeParameterizedMember(context, parametersForAnalyze);
         }
 
         private static void AnalyzeSimpleLambda(SyntaxNodeAnalysisContext context)
         {
             var simpleLambda = (SimpleLambdaExpressionSyntax) context.Node;
             var parameters = simpleLambda.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
-            AnalyzeParameterizedMember(context, parameters);
-        }
-
-        private static void AnalyzeParenthesizedLambda(SyntaxNodeAnalysisContext context)
-        {
-            var parenthesizedLambda = (ParenthesizedLambdaExpressionSyntax)context.Node;
-            var parameters = parenthesizedLambda.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
-            AnalyzeParameterizedMember(context, parameters);
-        }
-
-        private static void AnalyzeLocalMethod(SyntaxNodeAnalysisContext context)
-        {
-            var localMethod = (LocalFunctionStatementSyntax)context.Node;
-            var parameters = localMethod.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
-            AnalyzeParameterizedMember(context, parameters);
-        }
-
-        private static void AnalyzeBaseMethod(SyntaxNodeAnalysisContext context)
-        {
-            var BaseMethod = (BaseMethodDeclarationSyntax) context.Node;
-            var parameters = BaseMethod.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
-            AnalyzeParameterizedMember(context, parameters);
-        }
-
-        private static void AnalyzeIndexer(SyntaxNodeAnalysisContext context)
-        {
-            var indexer = (IndexerDeclarationSyntax) context.Node;
-            var parameters = indexer.GetAvailableForAnalyzeParameters(context.SemanticModel).ToList();
             AnalyzeParameterizedMember(context, parameters);
         }
 

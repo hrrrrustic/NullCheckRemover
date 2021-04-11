@@ -15,14 +15,7 @@ namespace NullCheckRemover.NullAnalyzer
             var nullLabel = switchStatement
                 .Sections
                 .SelectMany(k => k.Labels)
-                .SingleOrDefault(k =>
-                {
-                    //Я без понятия почему у SwitchLabelSyntax нету проперти Value >_>
-                    //Его просто нету @_@ В дебаге вижу его, но из кода вызвать не могу. На гитахбе в сурсах тоже его не нашел
-                    //Хотя в документации оно везде есть
-                    var childs = k.ChildNodes().OfType<LiteralExpressionSyntax>().FirstOrDefault();
-                    return childs?.IsKind(SyntaxKind.NullLiteralExpression) ?? false;
-                });
+                .SingleOrDefault(k => k is CaseSwitchLabelSyntax label && label.Value.IsKind(SyntaxKind.NullLiteralExpression));
 
             return nullLabel is null ? AnalyzeResult.False() : AnalyzeResult.True(nullLabel.GetLocation());
         }
