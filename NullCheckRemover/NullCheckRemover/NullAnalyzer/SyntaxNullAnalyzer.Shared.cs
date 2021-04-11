@@ -30,7 +30,11 @@ namespace NullCheckRemover.NullAnalyzer
             };
 
         private bool IsInterestingForAnalyze(ISymbol? symbol) 
-            => _parameters.Any(k => SymbolEqualityComparer.Default.Equals(k, symbol));
+            => _parameters.Any(k => IsEqualsSymbol(k, symbol) || UnsafeIsEqualsSymbolByName(k, symbol));
+
+        private bool IsEqualsSymbol(ISymbol? first, ISymbol? second) => SymbolEqualityComparer.Default.Equals(first, second);
+
+        private bool UnsafeIsEqualsSymbolByName(ISymbol? first, ISymbol? second) => first?.Name == second?.Name;
 
         private bool IsInterestingForAnalyze(ExpressionSyntax expression)
         {

@@ -27,9 +27,9 @@ namespace NullCheckRemover
             context.RegisterSyntaxNodeAction(AnalyzeBaseMethod, SyntaxKind.MethodDeclaration, SyntaxKind.ConstructorDeclaration, SyntaxKind.OperatorDeclaration, SyntaxKind.ConversionOperatorDeclaration, SyntaxKind.DestructorDeclaration);
             context.RegisterSyntaxNodeAction(AnalyzeLocalMethod, SyntaxKind.LocalFunctionStatement);
 
-            //context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
-            //context.RegisterSyntaxNodeAction(AnalyzeParenthesizedLambda, SyntaxKind.ParenthesizedLambdaExpression);
-            //context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
+            context.RegisterSyntaxNodeAction(AnalyzeIndexer, SyntaxKind.IndexerDeclaration);
+            context.RegisterSyntaxNodeAction(AnalyzeParenthesizedLambda, SyntaxKind.ParenthesizedLambdaExpression);
+            context.RegisterSyntaxNodeAction(AnalyzeSimpleLambda, SyntaxKind.SimpleLambdaExpression);
         }
 
         private static void AnalyzeSimpleLambda(SyntaxNodeAnalysisContext context)
@@ -78,8 +78,6 @@ namespace NullCheckRemover
 
             foreach (var location in locations)
             {
-                context.CancellationToken.ThrowIfCancellationRequested();
-
                 var diagnostic = Diagnostic.Create(Rule, location);
                 context.ReportDiagnostic(diagnostic);
             }
