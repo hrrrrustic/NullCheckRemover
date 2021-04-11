@@ -10,8 +10,8 @@ namespace NullCheckRemover.NullFixer
             => binaryExpressionSyntax.Kind() switch
             {
                 SyntaxKind.CoalesceExpression => FixCoalesce(binaryExpressionSyntax),
-                SyntaxKind.EqualsExpression => FixComplexBinaryExpression(binaryExpressionSyntax),
-                SyntaxKind.NotEqualsExpression => FixComplexBinaryExpression(binaryExpressionSyntax),
+                SyntaxKind.EqualsExpression => FixComparing(binaryExpressionSyntax, SyntaxKind.EqualsExpression),
+                SyntaxKind.NotEqualsExpression => FixComparing(binaryExpressionSyntax, SyntaxKind.NotEqualsExpression),
                 _ => _editor.OriginalDocument
             };
 
@@ -21,9 +21,19 @@ namespace NullCheckRemover.NullFixer
             return ApplyFix(binaryExpressionSyntax, onlyRightPart);
         }
 
-        private Document FixEquality(BinaryExpressionSyntax binaryExpressionSyntax) => FixComparing(SyntaxKind.TrueLiteralExpression, binaryExpressionSyntax);
+        private Document FixComparing(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind comparingExpression)
+        {
+            if (binaryExpressionSyntax.Parent is BinaryExpressionSyntax alsoBinary)
+                return FixComplexBinaryExpression(binaryExpressionSyntax, alsoBinary);
 
-        private Document FixNotEquality(BinaryExpressionSyntax binaryExpressionSyntax) => FixComparing(SyntaxKind.FalseLiteralExpression, binaryExpressionSyntax);
+            return FixWithBlockSimplifying(binaryExpressionSyntax, comparingExpression);
+        }
+
+        private Document FixEquality(BinaryExpressionSyntax binaryExpressionSyntax) 
+            => FixComparing(SyntaxKind.FalseLiteralExpression, binaryExpressionSyntax);
+
+        private Document FixNotEquality(BinaryExpressionSyntax binaryExpressionSyntax) 
+            => FixComparing(SyntaxKind.TrueLiteralExpression, binaryExpressionSyntax);
 
         private Document FixComparing(SyntaxKind literalForReplace, BinaryExpressionSyntax originalNode)
         {
@@ -31,11 +41,38 @@ namespace NullCheckRemover.NullFixer
             return ApplyFix(originalNode, nodeForReplace);
         }
 
-        private Document FixComplexBinaryExpression(BinaryExpressionSyntax node)
+        private Document FixWithBlockSimplifying(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind literalForReplace)
         {
-            if (node.Parent is not BinaryExpressionSyntax parentBinary)
-                return _editor.OriginalDocument;
+            if (binaryExpressionSyntax.Parent is IfStatementSyntax ifStatement)
+                return InlineIf(ifStatement, literalForReplace);
 
+            return FixComparing(literalForReplace, binaryExpressionSyntax);
+        }
+
+        private Document InlineIf(IfStatementSyntax ifStatement, SyntaxKind comparingExpression)
+        {
+            return (ifStatement.Else is null, comparingExpression) switch
+            {
+                (true, SyntaxKind.EqualsExpression) => ApplyFix(ifStatement),
+                (true, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
+                (false, SyntaxKind.EqualsExpression) => InlineElse(ifStatement),
+                (false, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
+            };
+        }
+
+        private Document InlineElse(IfStatementSyntax ifStatement)
+        {
+            var elseNode = ifStatement.Else;
+            if (elseNode!.Statement is IfStatementSyntax elseIf)
+                return ApplyFix(ifStatement, elseIf);
+
+            return InlineNodes(ifStatement, elseNode.Statement.ChildNodes());
+        }
+
+        private Document InlineIf(IfStatementSyntax ifStatement) => InlineNodes(ifStatement, ifStatement.Statement.ChildNodes());
+
+        private Document FixComplexBinaryExpression(BinaryExpressionSyntax node, BinaryExpressionSyntax parentBinary)
+        {
             return (node.Kind(), parentBinary.Kind()) switch
             {
                 (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => _editor.OriginalDocument,

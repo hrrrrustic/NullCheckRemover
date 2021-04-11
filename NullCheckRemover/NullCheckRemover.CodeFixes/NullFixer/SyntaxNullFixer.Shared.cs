@@ -1,5 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Collections.Generic;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
+using System.Linq;
 
 namespace NullCheckRemover.NullFixer
 {
@@ -12,15 +15,25 @@ namespace NullCheckRemover.NullFixer
             _editor = editor;
         }
 
-        private Document ApplyFix(SyntaxNode oldNode, SyntaxNode newNode)
+        private Document ApplyFix(SyntaxNode oldNode, SyntaxNode newNode, bool normalizeWhitespace = true)
         {
-            _editor.ReplaceNode(oldNode, newNode.NormalizeWhitespace());
+            if (normalizeWhitespace)
+                newNode = newNode.NormalizeWhitespace();
+
+            _editor.ReplaceNode(oldNode, newNode);
             return _editor.GetChangedDocument();
         }
 
         private Document ApplyFix(SyntaxNode forRemoving)
         {
             _editor.RemoveNode(forRemoving);
+            return _editor.GetChangedDocument();
+        }
+
+        private Document InlineNodes(SyntaxNode current, IEnumerable<SyntaxNode> statesForInline)
+        {
+            _editor.InsertBefore(current, statesForInline);
+            _editor.RemoveNode(current);
             return _editor.GetChangedDocument();
         }
     }
