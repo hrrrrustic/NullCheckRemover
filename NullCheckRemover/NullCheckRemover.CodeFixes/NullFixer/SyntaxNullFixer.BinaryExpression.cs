@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -10,8 +11,8 @@ namespace NullCheckRemover.NullFixer
             => binaryExpressionSyntax.Kind() switch
             {
                 SyntaxKind.CoalesceExpression => FixCoalesce(binaryExpressionSyntax),
-                SyntaxKind.EqualsExpression => FixComparing(binaryExpressionSyntax, SyntaxKind.EqualsExpression),
-                SyntaxKind.NotEqualsExpression => FixComparing(binaryExpressionSyntax, SyntaxKind.NotEqualsExpression),
+                SyntaxKind.EqualsExpression => FixComparing(binaryExpressionSyntax, false),
+                SyntaxKind.NotEqualsExpression => FixComparing(binaryExpressionSyntax, true),
                 _ => _editor.OriginalDocument
             };
 
@@ -21,57 +22,45 @@ namespace NullCheckRemover.NullFixer
             return ReplaceNode(binaryExpressionSyntax, onlyRightPart);
         }
 
-        private Document FixComparing(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind comparingExpression)
+        private Document FixComparing(BinaryExpressionSyntax binaryExpressionSyntax, bool expressionResultAfterFix)
         {
             if (binaryExpressionSyntax.Parent is BinaryExpressionSyntax alsoBinary)
                 return FixComplexBinaryExpression(binaryExpressionSyntax, alsoBinary);
 
-            return FixWithBlockSimplifying(binaryExpressionSyntax, comparingExpression);
+            return FixWithBlockSimplifying(binaryExpressionSyntax, expressionResultAfterFix);
         }
 
-        private Document FixEquality(BinaryExpressionSyntax binaryExpressionSyntax) 
-            => FixComparing(SyntaxKind.FalseLiteralExpression, binaryExpressionSyntax);
-
-        private Document FixNotEquality(BinaryExpressionSyntax binaryExpressionSyntax) 
-            => FixComparing(SyntaxKind.TrueLiteralExpression, binaryExpressionSyntax);
-
-        private Document FixComparing(SyntaxKind literalForReplace, BinaryExpressionSyntax originalNode)
+        private Document FixComparing(bool expressionResultAfterFix, BinaryExpressionSyntax originalNode)
         {
-            var nodeForReplace = SyntaxFactory.LiteralExpression(literalForReplace);
+            var literalKind = expressionResultAfterFix ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression;
+            var nodeForReplace = SyntaxFactory.LiteralExpression(literalKind);
             return ReplaceNode(originalNode, nodeForReplace);
         }
 
-        private Document FixWithBlockSimplifying(BinaryExpressionSyntax binaryExpressionSyntax, SyntaxKind literalForReplace)
+        private Document FixWithBlockSimplifying(BinaryExpressionSyntax binaryExpressionSyntax, bool expressionResultAfterFix)
         {
             if (binaryExpressionSyntax.Parent is IfStatementSyntax ifStatement)
-                return InlineIf(ifStatement, literalForReplace);
+                return InlineIf(ifStatement, expressionResultAfterFix);
 
             if (binaryExpressionSyntax.Parent is ConditionalExpressionSyntax conditional)
-                return InlineConditional(conditional, literalForReplace);
+                return InlineConditional(conditional, expressionResultAfterFix);
 
-            return FixComparing(literalForReplace, binaryExpressionSyntax);
+            return FixComparing(expressionResultAfterFix, binaryExpressionSyntax);
         }
 
-        private Document InlineConditional(ConditionalExpressionSyntax conditional, SyntaxKind comparingExpression) 
-            => comparingExpression switch
-            {
-                SyntaxKind.EqualsExpression => InlineConditionalPart(conditional, false),
-                SyntaxKind.NotEqualsExpression => InlineConditionalPart(conditional, true)
-            };
-
-        private Document InlineConditionalPart(ConditionalExpressionSyntax conditional, bool conditionValue)
+        private Document InlineConditional(ConditionalExpressionSyntax conditional, bool conditionValue)
         {
             var nodeForInline = conditionValue ? conditional.WhenTrue : conditional.WhenFalse;
             return ReplaceNode(conditional, nodeForInline);
         }
 
-        private Document InlineIf(IfStatementSyntax ifStatement, SyntaxKind comparingExpression) 
-            => (ifStatement.Else is null, comparingExpression) switch
+        private Document InlineIf(IfStatementSyntax ifStatement, bool ifExpressionValue) 
+            => (ifStatement.Else is null, ifExpressionValue) switch
             {
-                (true, SyntaxKind.EqualsExpression) => RemoveNode(ifStatement),
-                (true, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
-                (false, SyntaxKind.EqualsExpression) => InlineElse(ifStatement),
-                (false, SyntaxKind.NotEqualsExpression) => InlineIf(ifStatement),
+                (true, false) => RemoveNode(ifStatement),
+                (true, true) => InlineIf(ifStatement),
+                (false, false) => InlineElse(ifStatement),
+                (false, true) => InlineIf(ifStatement),
             };
 
         private Document InlineElse(IfStatementSyntax ifStatement)
@@ -79,6 +68,9 @@ namespace NullCheckRemover.NullFixer
             var elseNode = ifStatement.Else;
             if (elseNode!.Statement is IfStatementSyntax elseIf)
                 return ReplaceNode(ifStatement, elseIf);
+
+            if (ifStatement.Parent is ElseClauseSyntax parentElse)
+                return InlineElse(parentElse.Ancestors().OfType<IfStatementSyntax>().First());
 
             return InlineNodes(ifStatement, elseNode.Statement.ChildNodes());
         }
@@ -88,10 +80,10 @@ namespace NullCheckRemover.NullFixer
         private Document FixComplexBinaryExpression(BinaryExpressionSyntax node, BinaryExpressionSyntax parentBinary) 
             => (node.Kind(), parentBinary.Kind()) switch
             {
-                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => FixComparing(SyntaxKind.FalseLiteralExpression, node),
+                (SyntaxKind.EqualsExpression, SyntaxKind.LogicalAndExpression) => FixComparing(false, node),
                 (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalAndExpression) => ReplaceNode(parentBinary, parentBinary.Right),
                 (SyntaxKind.EqualsExpression, SyntaxKind.LogicalOrExpression) => ReplaceNode(parentBinary, parentBinary.Right),
-                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => FixComparing(SyntaxKind.TrueLiteralExpression, node),
+                (SyntaxKind.NotEqualsExpression, SyntaxKind.LogicalOrExpression) => FixComparing(true, node),
                 _ => _editor.OriginalDocument
             };
     }
